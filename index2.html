@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Advanced Task Manager</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      justify-content: center;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    :root {
+      --bg-color: #f5f7fa;
+      --text-color: #333;
+      --card-bg: #fff;
+    }
+    body.dark {
+      --bg-color: #121212;
+      --text-color: #eee;
+      --card-bg: #1e1e1e;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      padding: 2rem;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    #taskForm {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    input[type="text"], input[type="date"], select {
+      padding: 0.6rem;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+
+    input:focus, select:focus {
+      border-color: #3b82f6;
+      outline: none;
+    }
+
+    .add-btn {
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0 1.2rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .add-btn:hover { background-color: #2563eb; }
+
+    .toggle-mode {
+      margin: 0 auto 1.5rem;
+      display: block;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      background: #ccc;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    ul.task-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.7rem;
+      border-bottom: 1px solid #ddd;
+      background: var(--card-bg);
+      cursor: grab;
+    }
+
+    li.completed .task-title {
+      text-decoration: line-through;
+      color: gray;
+    }
+
+    .task-title {
+      flex-grow: 1;
+    }
+
+    .task-meta {
+      font-size: 0.85rem;
+      opacity: 0.8;
+    }
+
+    .edit-btn, .delete-btn {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .delete-btn { color: red; }
+    .edit-btn { color: green; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Task Manager</h1>
+
+  <button class="toggle-mode" onclick="toggleMode()">🌗 Toggle Mode</button>
+
+ <form id="taskForm">
+  <input 
+    type="text" 
+    id="taskInput" 
+    placeholder="Enter new task..." 
+    required 
+  />
+
+  <input 
+    type="date" 
+    id="dueDate" 
+    title="Select due date" 
+  />
+
+  <label for="priority">Priority:</label>
+<select id="priority" name="priority" required>
+  <option value="" disabled selected hidden>Select priority</option>
+  <option value="Low">Low</option>
+  <option value="Medium">Medium</option>
+  <option value="High">High</option>
+</select>
+
+  <button type="submit" class="add-btn">Add</button>
+</form>
+
+
+  <ul class="task-list" id="taskList"></ul>
+</div>
+
+<script>
+  const taskForm = document.getElementById("taskForm");
+  const taskInput = document.getElementById("taskInput");
+  const dueDateInput = document.getElementById("dueDate");
+  const prioritySelect = document.getElementById("priority");
+  const taskList = document.getElementById("taskList");
+
+  let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+  taskForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const title = taskInput.value.trim();
+    if (!title) return;
+
+    const task = {
+      id: Date.now(),
+      title,
+      dueDate: dueDateInput.value || null,
+      priority: prioritySelect.value || "Low",
+      completed: false,
+    };
+
+    tasks.push(task);
+    saveTasks();
+    renderTasks();
+    taskForm.reset();
+  });
+
+  function saveTasks() {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+  }
+
+  function renderTasks() {
+    taskList.innerHTML = "";
+    tasks.forEach(task => {
+      const li = document.createElement("li");
+      li.draggable = true;
+      if (task.completed) li.classList.add("completed");
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = task.completed;
+      checkbox.onchange = () => {
+        task.completed = checkbox.checked;
+        saveTasks();
+        renderTasks();
+      };
+
+      const span = document.createElement("span");
+      span.textContent = task.title;
+      span.className = "task-title";
+      span.contentEditable = true;
+      span.onblur = () => {
+        task.title = span.textContent.trim();
+        saveTasks();
+      };
+
+      const meta = document.createElement("div");
+      meta.className = "task-meta";
+      meta.innerText = `${task.dueDate ? '📅 ' + task.dueDate : ''} ${task.priority ? '⚡ ' + task.priority : ''}`;
+
+      const delBtn = document.createElement("button");
+      delBtn.innerHTML = "❌";
+      delBtn.className = "delete-btn";
+      delBtn.onclick = () => {
+        tasks = tasks.filter(t => t.id !== task.id);
+        saveTasks();
+        renderTasks();
+      };
+
+      li.append(checkbox, span, meta, delBtn);
+      taskList.appendChild(li);
+    });
+    addDragEvents();
+  }
+
+  function addDragEvents() {
+    const items = taskList.querySelectorAll("li");
+    let dragSrc = null;
+    items.forEach(item => {
+      item.addEventListener("dragstart", function (e) {
+        dragSrc = this;
+        e.dataTransfer.effectAllowed = "move";
+      });
+      item.addEventListener("dragover", function (e) {
+        e.preventDefault();
+      });
+      item.addEventListener("drop", function () {
+        if (dragSrc !== this) {
+          const draggedIndex = [...taskList.children].indexOf(dragSrc);
+          const droppedIndex = [...taskList.children].indexOf(this);
+          const moved = tasks.splice(draggedIndex, 1)[0];
+          tasks.splice(droppedIndex, 0, moved);
+          saveTasks();
+          renderTasks();
+        }
+      });
+    });
+  }
+
+  function toggleMode() {
+    document.body.classList.toggle("dark");
+    localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+  }
+
+  // Load dark mode
+  if (localStorage.getItem("darkMode") === "true") {
+    document.body.classList.add("dark");
+  }
+
+  renderTasks();
+</script>
+</body>
+</html>
